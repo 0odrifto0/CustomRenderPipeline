@@ -5,12 +5,6 @@
 [Bb]uilds/
 [Ll]ogs/
 
-# Never ignore Asset meta data
-![Aa]ssets/**/*.meta
-
-# Uncomment this line if you wish to ignore the asset store tools plugin
-# [Aa]ssets/AssetStoreTools*
-
 # Visual Studio cache directory
 .vs/
 
@@ -42,10 +36,6 @@ ExportedObj/
 
 # Unity3D generated file on crash reports
 sysinfo.txt
-
-# Builds
-*.apk
-*.unitypackage
 
 # Crashlytics generated file
 crashlytics-build.properties
