@@ -27,10 +27,33 @@ public class CustomRenderPipeline : RenderPipeline
     {
         base.Render(renderContext, cameras);
 
-        var cmd = new CommandBuffer();
-        cmd.ClearRenderTarget(true, true, Color.gray);
-        renderContext.ExecuteCommandBuffer(cmd);
-        cmd.Release();
-        renderContext.Submit();
+        foreach (var camera in cameras)
+        {
+            // Culling
+            ScriptableCullingParameters cullParams;
+            if (!CullResults.GetCullingParameters(camera, out cullParams))
+                continue;
+
+            var cmd = CommandBufferPool.Get();
+            cmd.ClearRenderTarget(true, false, Color.black);
+            renderContext.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
+
+            CullResults cullResults = new CullResults();
+            CullResults.Cull(ref cullParams, renderContext, ref cullResults);
+
+            // Setup Camera
+            renderContext.SetupCameraProperties(camera);
+
+            // Filter 
+            var opaqueRange = new FilterRenderersSettings(true) { renderQueueRange = RenderQueueRange.opaque };
+
+            // Render setting
+            var drs = new DrawRendererSettings(camera, new ShaderPassName("BasePass"));
+            drs.sorting.flags = SortFlags.CommonOpaque;
+            renderContext.DrawRenderers(cullResults.visibleRenderers, ref drs, opaqueRange);
+
+            renderContext.Submit();
+        }
     }
 }
