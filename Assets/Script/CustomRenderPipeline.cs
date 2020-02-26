@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Experimental.Rendering;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
@@ -15,7 +12,8 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset
         UnityEditor.AssetDatabase.CreateAsset(inst, "Assets/SRP/CustomRenderPipeline.asset");
     }
 #endif
-    protected override IRenderPipeline InternalCreatePipeline()
+
+    protected override RenderPipeline CreatePipeline()
     {
         return new CustomRenderPipeline();
     }
@@ -23,37 +21,42 @@ public class CustomRenderPipelineAsset : RenderPipelineAsset
 
 public class CustomRenderPipeline : RenderPipeline
 {
-    public override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
+    protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
-        base.Render(renderContext, cameras);
+        BeginFrameRendering(renderContext, cameras);
 
         foreach (var camera in cameras)
         {
-            // Culling
-            ScriptableCullingParameters cullParams;
-            if (!CullResults.GetCullingParameters(camera, out cullParams))
-                continue;
+            BeginCameraRendering(renderContext, camera);
 
+            // clear target
             var cmd = CommandBufferPool.Get();
             cmd.ClearRenderTarget(true, false, Color.black);
             renderContext.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
 
-            CullResults cullResults = new CullResults();
-            CullResults.Cull(ref cullParams, renderContext, ref cullResults);
-
             // Setup Camera
             renderContext.SetupCameraProperties(camera);
 
-            // Filter 
-            var opaqueRange = new FilterRenderersSettings(true) { renderQueueRange = RenderQueueRange.opaque };
+            // Culling
+            ScriptableCullingParameters cullParams;
+            if (!camera.TryGetCullingParameters(out cullParams))
+                continue;
 
-            // Render setting
-            var drs = new DrawRendererSettings(camera, new ShaderPassName("BasePass"));
-            drs.sorting.flags = SortFlags.CommonOpaque;
-            renderContext.DrawRenderers(cullResults.visibleRenderers, ref drs, opaqueRange);
+            var cullingResults = renderContext.Cull(ref cullParams);
+
+            // Setting
+            var sortSetting = new SortingSettings(camera) { criteria = SortingCriteria.CommonOpaque };
+            var drawSetting = new DrawingSettings(new ShaderTagId("BasePass"), sortSetting);
+            var filterSetting = new FilteringSettings(RenderQueueRange.opaque);
+
+            renderContext.DrawRenderers(cullingResults, ref drawSetting, ref filterSetting);
 
             renderContext.Submit();
+
+            EndCameraRendering(renderContext, camera);
         }
+
+        EndFrameRendering(renderContext, cameras);
     }
 }
