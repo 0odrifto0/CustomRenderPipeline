@@ -1,17 +1,19 @@
-﻿Shader "CustomSRP/BaseColor"
+﻿Shader "CustomSRP/Texture"
 {
     Properties
     {
+        _MainColor ("MainColor", Color) = (1,1,1,1)
         _MainTex ("Texture", 2D) = "white" {}
     }
     SubShader
     {
         Tags { "RenderType"="Opaque" "Queue" = "Geometry" }
+
         LOD 100
 
         Pass
         {
-			Tags { "LightMode" = "BasePass" }
+			Tags { "LightMode" = "ForwardBase" }
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -31,6 +33,7 @@
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            half4 _MainColor;
 
             v2f vert (appdata v)
             {
@@ -42,7 +45,7 @@
 
             half4 frag (v2f i) : SV_Target
             {
-                return tex2D(_MainTex, i.uv);
+                return tex2D(_MainTex, i.uv) * _MainColor;
             }
 
             ENDHLSL
